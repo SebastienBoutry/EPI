@@ -1,6 +1,10 @@
 library(tidyverse)
 
 
+
+db.con <- dbConnect(db.driver, user = "sboutry", password = getPass(), dbname = "epbx_dce_pomet", host = "citerne.bordeaux.irstea.priv")
+
+
 Data_Dives <- read_csv2("input/Data_Dives.csv") |> 
   mutate_at(c("station","nom"),str_trim)  |> 
   mutate(nom=case_when(nom %in% c("Abramis")~"Abramis brama",
