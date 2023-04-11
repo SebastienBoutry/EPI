@@ -1,0 +1,42 @@
+---
+title: "Titre"
+subtitle: "Sous-titre"
+author: "Auteur du document"
+date: "`r lubridate::today()`"
+license: "Open Licence (Etalab)"
+toc: true
+format:
+  html:
+    code-overflow: wrap
+    theme: lumen
+    number-sections: true
+    highlight-style: github
+    html-math-method: katex
+    code-fold: show
+    code-tools: true
+    self-contained: true
+execute:
+  warning: false
+  message: false
+  out.width: "100%"
+  df_print: kable
+editor_options:
+  chunk_output_type: console
+---
+
+# Intro
+
+# Conclusion
+
+Pour conclure :
+
+# R session info {-}
+
+Pensez à inclure cette section afin d'indiquer l'état de votre machine lorsque vous avez réalisé cette analyse.
+
+```{r session info}
+xfun::session_info()
+```
+
+# References {-}
+

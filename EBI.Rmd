@@ -1,0 +1,218 @@
+---
+title: "ExtractionPOMET"
+author: "Emmanuel De Mil"
+date: "2023-03-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages_used}
+
+rm(list=ls()) # nettoyage de la console
+
+library(dplyr)
+library(tidyr)
+```
+
+# Changement du répertoire de travail
+
+```{r Work_directory_def}
+setwd("C:/Users/edemilolear/Documents/Data_Dives/EBI")
+```
+
+# Ecriture de la fonction permettant la connection à la base de données
+
+```{r BDD_connexion_fct}
+
+##################################################################################
+
+# # .libPaths(.libPaths()[2])
+# library(RPostgreSQL)
+# 
+# db.driver <- dbDriver("PostgreSQL")
+# 
+# ## Création de la fonction de saisie du mot de passe, avec effacement de la console après saisie
+# 
+# getPass <- function()  {
+#   print("password: ")
+#   pass = scan(n = 1, what = character(), quiet = TRUE)
+#   cat("\014")
+#   return(pass)
+# }
+
+```
+
+# Ouverture de la connexion
+
+Lancer uniquement cette première ligne de code/connection puis rentrer son mot de passe dans la console
+
+Attention ! Bien penser à changer le "user" dans la commande db.con et vérifier le nom de la BDD interrogée (ici, BDD DCE)
+
+```{r BDD_connexion}
+
+# db.con <- dbConnect(db.driver, user = "edemilolear", password = getPass(), dbname = "epbx_dce_pomet", host = "citerne.bordeaux.irstea.priv")
+
+```
+
+Réalisation de la requête permettant de récupérer l'ensemble des données POMET
+
+```{r Rqt_POMET}
+# Data_POMET <- dbGetQuery(db.con,  " SELECT trait_id, experimentation, fk_materiel_id, madate, station, pos_deb_lat_dd, pos_deb_long_dd, pos_fin_lat_dd, pos_fin_long_dd, distance_chalutee, duree, nt, pt, espece.nom, nom_fr, engin, masse_eau, salinite_classe, systeme
+#                               FROM trait, echantillon, espece, campagnes, masse_eau
+#                               WHERE trait.trait_id = echantillon.fk_trait_id AND echantillon.espece_id = espece.espece_id AND trait.fk_campagne_id = campagnes.campagne_id AND campagnes.fk_masse_eau = masse_eau.masse_eau_id;
+#                               "
+# )
+# 
+# write.csv2(Data_POMET, "./input/Data_POMET.csv", row.names = F)
+
+```
+
+# Import des données depuis un fichier CSV
+
+Une fois l'extraction POMET faite, il est possible de ne recommencer le script que depuis ici (si CSV avec plusieurs estuaires) ou depuis plus bas (si estuaire déjà selectionné). Adapter les répertoirs.
+
+## CSV avec plusieurs estuaires
+
+```{r Import_POMET}
+# Data_POMET <- read.csv2("C:/Users/edemilolear/Documents/Data_Dives/EBI/input/Data_POMET.csv", sep = ";")
+
+```
+
+## Sélection des données de l'estuaire voulu et création du CSV
+
+Dans ce script, on calcule EBI sur l'estuaire de la Dives. Cependant, la méthode reste la même pour d'autres estuaires.
+
+```{r Rqt_Dives}
+# # Sélection des données de la Dives
+# Data_Dives <- Data_POMET %>% filter(systeme %in% "Estuaire de la DIves")
+# 
+# # Ecriture du CSV
+# write.csv2(Data_Dives, "./input/Data_Dives.csv", row.names = F)
+
+```
+
+## CSV avec un seul estuaire
+
+```{r Import_Dives}
+Data_Dives <- read.csv2("C:/Users/edemilolear/Documents/Data_Dives/EBI/input/Data_Dives.csv", sep = ";")
+
+# Corrections des erreurs issues de POMET
+Data_Dives$station[Data_Dives$station %in% "Centre 1 "] <- "Centre 1"
+Data_Dives$nom[Data_Dives$nom %in% "Abramis"] <- "Abramis brama"
+Data_Dives$nom[Data_Dives$nom %in% "Liza ramada"] <- "Chelon ramada"
+Data_Dives$nom[Data_Dives$nom %in% "Anguilla"] <- "Anguilla anguilla"
+
+
+
+
+```
+
+Vérification des résultats de la requête
+
+```{r Verif_rqt_Dives}
+dim(Data_Dives)
+head(Data_Dives)
+summary(Data_Dives)
+Data_Dives %>% distinct(experimentation)
+
+Data_Dives %>% filter(experimentation %in% "DCE verveux") %>% distinct(madate)
+
+table(is.na(Data_Dives$nt), is.na(Data_Dives$pt))
+# ftable(Data_Dives$nom, is.na(Data_Dives$nt), is.na(Data_Dives$pt))
+
+```
+
+# Importation du CSV contenant seuils de classes pour chaque métrique
+
+```{r Import_seuils}
+Thresholds <- read.csv2("C:/Users/edemilolear/Documents/Data_Dives/EBI/Input/Thresholds_EBI-fr.csv", sep = ";")
+
+
+```
+
+# Importation du CSV indiquant quelles espèces inclure dans les calculs des métriques
+
+```{r Import_metrq}
+SpMetrq <- read.csv2("C:/Users/edemilolear/Documents/Data_Dives/EBI/Input/SpeciesMetrics.csv", sep = ";")
+
+# # Supprime les espaces parasites 
+# library(stringr)
+# SpMetrq$Species <- stringr::str_trim(SpMetrq$Species)
+
+
+# # Listes de réf
+# SpFW <- read.csv2("C:/Users/edemilolear/Documents/Data_Dives/EBI/Input/SpFW.csv", sep = ";")
+# setdiff(SpFW$Species, SpMetrq$Species)
+# 
+# SpMeso <- read.csv2("C:/Users/edemilolear/Documents/Data_Dives/EBI/Input/SpMeso.csv", sep = ";")
+# setdiff(SpMeso$Species, SpMetrq$Species)
+# 
+# SpPoly <- read.csv2("C:/Users/edemilolear/Documents/Data_Dives/EBI/Input/SpPoly.csv", sep = ";")
+# setdiff(SpPoly$Species, SpMetrq$Species)
+
+
+```
+
+# Observation des listes de référence
+
+```{r Obs_ref}
+# Compare liste de ref et espèces prises en compte dans indicateurs
+SpMetrq %>% filter(MpiInv_FW %in% 1 | Ref_FW %in% 1) %>% 
+  select(Species, MpiInv_FW, Ref_FW)
+# Gobio goio (déjà présente dans EBI) et L. leuciscus (rajoutée dans EBI-Fr) dans MpiInv mais pas dans liste de réf FW
+
+SpMetrq %>% filter(MpiSpa_FW %in% 1 | Ref_FW %in% 1) %>% 
+  select(Species, MpiSpa_FW, Ref_FW)
+# Gobio goio dans MpiSpa mais pas dans liste de réf FW
+
+SpMetrq %>% filter(MnsPis_FW %in% 1 | Ref_FW %in% 1) %>% 
+  select(Species, MnsPis_FW, Ref_FW)
+
+###
+SpMetrq %>% filter(MpiMj_mesopoly %in% 1 | Ref_meso %in% 1 | Ref_poly %in% 1) %>% 
+  select(Species, MpiMj_mesopoly, Ref_meso, Ref_poly)
+# Atherina boyeri, lieu jaune, turbot et barbue pas dans listes
+
+SpMetrq %>% filter(MpiOmn_mesopoly %in% 1 | Ref_meso %in% 1 | Ref_poly %in% 1) %>% 
+  select(Species, MpiOmn_mesopoly, Ref_meso, Ref_poly)
+# 15 sp. dans MpiOmn mais pas dans liste de réf méso ou poly !!
+
+SpMetrq %>% filter(MpiPis_mesopoly %in% 1 | Ref_meso %in% 1 | Ref_poly %in% 1) %>% 
+  select(Species, MpiPis_mesopoly, Ref_meso, Ref_poly)
+
+
+# Listes de reférence
+SpMetrq %>% filter(Ref_poly %in% 1 | Ref_meso %in% 1 | Ref_FW %in% 1) %>% 
+  select(Species, Ref_poly, Ref_meso, Ref_FW)
+
+SpMetrq %>% filter(Ref_poly %in% 1 | Ref_meso %in% 1) %>% 
+  select(Species, Ref_poly, Ref_meso)
+
+
+```
+
+
+
+```{r}
+# On choisit de regrouper la fario et les truites de mer
+# Convertit S. trutta trutta et S. trutta fario en S. trutta
+Data_Dives$nom[Data_Dives$nom %in% c("Salmo trutta trutta", "Salmo trutta fario")] <- "Salmo trutta"
+
+
+# Sort les espèces présentes dans la BDD et pas dans la liste des métriques
+setdiff(Data_Dives$nom, SpMetrq$species)
+# Chelidonichthys lucernus
+# Dicentrarchus punctatus
+# Clupeidae
+# Petromyzontidae
+# Cottus
+# Phoxinus
+
+
+# Selectionne les lignes contenant "anguilla" et "flesus" dans la colonne "nom" 
+Data_Dives %>% filter(stringr::str_detect(nom, c("anguilla|flesus")))
+
+```
